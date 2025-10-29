@@ -1,0 +1,48 @@
+# 使用现有的postgres镜像作为基础（因为它已经包含了必要的系统工具）
+FROM postgres:15-alpine
+
+# 安装Python和必要的工具
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    python3-dev \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    curl
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制依赖文件
+COPY backend/pyproject.toml ./
+
+# 创建虚拟环境并安装Python依赖
+RUN python3 -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn \
+    sqlalchemy \
+    asyncpg \
+    psycopg2-binary \
+    python-jose \
+    passlib \
+    bcrypt \
+    email-validator \
+    greenlet
+
+# 复制源代码
+COPY backend/src/ ./src/
+COPY backend/data/ ./data/
+
+# 设置环境变量
+ENV PYTHONPATH=/app/src
+ENV PYTHONUNBUFFERED=1
+
+# 暴露端口
+EXPOSE 8000
+
+# 启动命令
+CMD ["python3", "-m", "uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -30,28 +30,68 @@
 
 ### 环境要求
 
+#### 本地开发模式
 - Python 3.10+
 - Node.js 16+
 - npm (或 pnpm)
+- Astral UV (Python包管理器)
+
+#### Docker模式
+- Docker 20.10+
+- Docker Compose 2.0+
 
 ### 方式一：一键启动（推荐）
 
-使用我们提供的一键启动脚本，自动安装依赖并启动前后端服务：
+使用我们提供的一键启动脚本，支持本地开发模式和Docker模式：
 
+#### 本地开发模式（默认）
 ```bash
-# 一键启动前后端服务
+# 一键启动前后端服务（本地开发模式）
 ./dev-start.sh
+# 或
+./dev-start.sh --local
 
 # 停止所有服务
 ./dev-stop.sh
 ```
 
-脚本会自动：
+#### Docker模式
+```bash
+# 使用Docker启动所有服务
+./dev-start.sh --docker
+
+# 停止Docker服务
+docker-compose down
+```
+
+#### 脚本功能说明
+
+**本地开发模式**会自动：
 - 检查环境要求（Node.js、Python、uv）
 - 安装前端和后端依赖
 - 启动后端服务（端口 8000）
 - 启动前端服务（端口 5173）
 - 等待服务就绪并显示访问地址
+
+**Docker模式**会自动：
+- 检查Docker和Docker Compose环境
+- 验证Docker配置文件完整性
+- 构建Docker镜像
+- 启动所有服务（数据库、后端、前端）
+- 等待所有服务就绪并显示访问地址
+
+#### 访问地址
+
+**本地开发模式**：
+- 前端：http://localhost:5173
+- 后端API：http://localhost:8000
+- API文档：http://localhost:8000/docs
+
+**Docker模式**：
+- 前端：http://localhost
+- 后端API：http://localhost:8000
+- API文档：http://localhost:8000/docs
+- 数据库：localhost:5432
 
 ### 方式二：手动启动
 
