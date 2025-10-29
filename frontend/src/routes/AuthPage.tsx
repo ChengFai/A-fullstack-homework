@@ -6,8 +6,10 @@ import {
   registerUser, 
   checkUserExists, 
   clearError, 
-  clearUserExists 
+  clearUserExists,
+  closeSuspensionAlert
 } from '../store/slices/authSlice';
+import { SuspensionAlert } from '../components/SuspensionAlert';
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -17,7 +19,8 @@ function AuthPage() {
     loading, 
     error, 
     isAuthenticated, 
-    checkingUser 
+    checkingUser,
+    showSuspensionAlert
   } = useAppSelector(state => state.auth);
 
   const [email, setEmail] = useState('');
@@ -208,6 +211,12 @@ function AuthPage() {
             {getButtonText()}
           </button>
         </form>
+        
+        {/* 停用用户提示 */}
+        <SuspensionAlert
+          isOpen={showSuspensionAlert}
+          onClose={() => dispatch(closeSuspensionAlert())}
+        />
       </div>
     </div>
   );

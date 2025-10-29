@@ -14,6 +14,7 @@ type AuthRes = {
     email: string;
     username: string;
     role: 'employee' | 'employer';
+    is_suspended?: boolean;
   };
 };
 

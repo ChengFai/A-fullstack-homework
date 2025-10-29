@@ -17,6 +17,7 @@ export interface AuthState {
   error: string | null;
   userExists: boolean | null;
   checkingUser: boolean;
+  showSuspensionAlert: boolean;
 }
 
 const initialState: AuthState = {
@@ -27,6 +28,7 @@ const initialState: AuthState = {
   error: null,
   userExists: null,
   checkingUser: false,
+  showSuspensionAlert: false,
 };
 
 // 异步thunk：登录
@@ -42,8 +44,17 @@ export const loginUser = createAsyncThunk(
       localStorage.setItem('role', response.user.role);
       return response;
     } catch (error: any) {
+      // 检查是否是账户停用错误
+      // 注意：HTTP拦截器会标准化错误，所以我们需要检查message字段
+      if ((error?.status === 403 || error?.response?.status === 403) && 
+          (error?.message?.includes('停用') || error?.response?.data?.detail?.includes('停用'))) {
+        return rejectWithValue({
+          type: 'suspension',
+          message: error?.message || error?.response?.data?.detail || '您的账户已被停用，请联系管理员'
+        });
+      }
       return rejectWithValue(
-        error?.response?.data?.detail || error?.message || '登录失败'
+        error?.message || error?.response?.data?.detail || error?.message || '登录失败'
       );
     }
   }
@@ -145,6 +156,9 @@ const authSlice = createSlice({
     clearUserExists: state => {
       state.userExists = null;
     },
+    closeSuspensionAlert: state => {
+      state.showSuspensionAlert = false;
+    },
   },
   extraReducers: builder => {
     builder
@@ -162,7 +176,14 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        const payload = action.payload as any;
+        if (payload?.type === 'suspension') {
+          state.showSuspensionAlert = true;
+          state.error = null; // 不显示普通错误，而是显示停用提示
+        } else {
+          state.error = payload as string;
+          state.showSuspensionAlert = false;
+        }
       })
       // 注册
       .addCase(registerUser.pending, state => {
@@ -229,5 +250,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser, clearUserExists } = authSlice.actions;
+export const { clearError, setUser, clearUserExists, closeSuspensionAlert } = authSlice.actions;
 export default authSlice.reducer;

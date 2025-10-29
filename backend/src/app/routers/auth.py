@@ -22,7 +22,8 @@ async def login(payload: LoginRequest, db_session: AsyncSession = Depends(get_db
 
     if existing.is_suspended:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="User suspended"
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="您的账户已被停用，请联系管理员"
         )
 
     if not verify_password(payload.password, existing.password_hash):
