@@ -18,6 +18,7 @@ class UserPublic(BaseModel):
     email: EmailStr
     username: str
     role: str
+    is_suspended: bool
 
 
 class AuthResponse(BaseModel):

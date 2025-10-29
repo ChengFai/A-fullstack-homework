@@ -13,7 +13,7 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
 
   const handleLogout = () => {
     dispatch(logoutUser());
-    navigate('/login');
+    navigate('/auth');
   };
 
   return (

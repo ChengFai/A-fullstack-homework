@@ -13,6 +13,7 @@ Requires-Dist: bcrypt>=4.0.0
 Requires-Dist: email-validator>=2.0.0.post2
 Requires-Dist: sqlalchemy>=2.0.0
 Requires-Dist: asyncpg>=0.29.0
+Requires-Dist: psycopg2-binary>=2.9.0
 Requires-Dist: alembic>=1.13.0
 Requires-Dist: greenlet>=3.2.4
 Provides-Extra: dev

@@ -29,6 +29,7 @@ class DatabaseService:
             username=username,
             role=role,
             password_hash=password_hash,
+            is_suspended=False,  # 明确设置为False，确保新用户默认是正常状态
         )
         self.session.add(user)
         await self.session.commit()

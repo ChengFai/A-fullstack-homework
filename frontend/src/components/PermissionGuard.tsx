@@ -23,12 +23,12 @@ function PermissionGuard({
 
   // 如果未认证，重定向到登录页
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   // 如果用户被暂停，重定向到登录页
   if (user.is_suspended) {
-    return <Navigate to="/login" state={{ message: '您的账户已被暂停' }} replace />;
+    return <Navigate to="/auth" state={{ message: '您的账户已被暂停' }} replace />;
   }
 
   // 检查角色权限

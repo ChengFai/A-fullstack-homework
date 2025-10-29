@@ -40,8 +40,9 @@ async def health():
     try:
         # 检查数据库连接
         from .database import engine
+        from sqlalchemy import text
         async with engine.begin() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
         
         return {
             "status": "ok",

@@ -19,12 +19,12 @@ function ProtectedRoute({ children, requiredRole, fallbackPath = '/tickets' }: P
 
   // 如果没有认证，重定向到登录页
   if (!isAuthenticated) {
-    return <Navigate to='/login' state={{ from: location }} replace />;
+    return <Navigate to='/auth' state={{ from: location }} replace />;
   }
 
   // 如果用户被暂停，重定向到登录页并清除认证状态
   if (user?.is_suspended) {
-    return <Navigate to='/login' state={{ message: '您的账户已被暂停' }} replace />;
+    return <Navigate to='/auth' state={{ message: '您的账户已被暂停' }} replace />;
   }
 
   // 如果指定了角色要求，检查用户角色
