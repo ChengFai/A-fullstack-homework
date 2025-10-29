@@ -10,7 +10,7 @@ export interface Employee {
   username: string;
   email: string;
   role: 'employee' | 'employer';
-  is_active: boolean;
+  is_suspended: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -112,7 +112,7 @@ const employeesSlice = createSlice({
           e => e.id === action.payload.employeeId
         );
         if (employee) {
-          employee.is_active = false;
+          employee.is_suspended = true;
         }
         state.error = null;
       })
@@ -131,7 +131,7 @@ const employeesSlice = createSlice({
           e => e.id === action.payload.employeeId
         );
         if (employee) {
-          employee.is_active = true;
+          employee.is_suspended = false;
         }
         state.error = null;
       })

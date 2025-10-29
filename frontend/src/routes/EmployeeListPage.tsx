@@ -68,11 +68,11 @@ function EmployeeListPage() {
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                 <span className="text-xs text-gray-500">
-                  {employees.filter(emp => emp.is_active).length} 活跃
+                  {employees.filter(emp => !emp.is_suspended).length} 活跃
                 </span>
                 <div className="w-2 h-2 bg-red-400 rounded-full"></div>
                 <span className="text-xs text-gray-500">
-                  {employees.filter(emp => !emp.is_active).length} 停用
+                  {employees.filter(emp => emp.is_suspended).length} 停用
                 </span>
               </div>
             </div>
@@ -146,16 +146,16 @@ function EmployeeListPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          employee.is_active
+                          !employee.is_suspended
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {employee.is_active ? '正常' : '已停用'}
+                        {!employee.is_suspended ? '正常' : '已停用'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {employee.is_active ? (
+                      {!employee.is_suspended ? (
                         <button
                           className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors duration-200"
                           onClick={() => handleAction(employee.id, 'suspend')}
