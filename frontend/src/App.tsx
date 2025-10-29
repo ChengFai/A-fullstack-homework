@@ -1,52 +1,43 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom'
-import { useAppSelector, useAppDispatch } from './store/hooks'
-import { logoutUser } from './store/slices/authSlice'
-import './index.css'
+import { useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import { useAppSelector } from './store/hooks';
+import { Sidebar } from './components/Sidebar';
+import { TopBar } from './components/TopBar';
+import './index.css';
 
 function App() {
-  const navigate = useNavigate()
-  const dispatch = useAppDispatch()
-  const { isAuthenticated, user } = useAppSelector(state => state.auth)
-  
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isAuthenticated } = useAppSelector(state => state.auth);
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="mx-auto max-w-6xl px-4 py-4 flex justify-between">
-          <nav className="space-x-4">
-            {isAuthenticated && (
-              <>
-                <Link to="/tickets" className="text-blue-600">票据</Link>
-                {user?.role === 'employer' && (
-                  <Link to="/employees" className="text-blue-600">员工</Link>
-                )}
-              </>
-            )}
-          </nav>
-          <div className="space-x-4">
-            {isAuthenticated ? (
-              <button
-                className="text-red-600"
-                onClick={() => {
-                  dispatch(logoutUser())
-                  navigate('/login')
-                }}
-              >退出</button>
-            ) : (
-              <>
-                <Link to="/login" className="text-blue-600">登录</Link>
-                <Link to="/register" className="text-green-600">注册</Link>
-              </>
-            )}
+      {/* 侧边栏 */}
+      {isAuthenticated && (
+        <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      )}
+
+      {/* 主内容区域 */}
+      <div className={`transition-all duration-300 ${isAuthenticated ? 'lg:ml-64' : ''}`}>
+        {/* 顶部导航栏 */}
+        <TopBar onMenuToggle={toggleSidebar} />
+
+        {/* 页面内容 */}
+        <main className="p-4 lg:p-6">
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
           </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl p-4">
-        <Outlet />
-      </main>
+        </main>
+      </div>
     </div>
-  )
+  );
 }
 
-export default App
-
-
+export default App;

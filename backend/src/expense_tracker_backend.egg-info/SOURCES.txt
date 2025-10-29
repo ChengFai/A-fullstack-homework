@@ -1,7 +1,10 @@
 README.md
 pyproject.toml
 src/app/__init__.py
+src/app/database.py
+src/app/db_service.py
 src/app/main.py
+src/app/models.py
 src/app/storage.py
 src/app/routers/__init__.py
 src/app/routers/auth.py

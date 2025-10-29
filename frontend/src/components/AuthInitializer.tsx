@@ -1,18 +1,19 @@
-import { useEffect } from 'react'
-import { useAppDispatch } from '../store/hooks'
-import { initializeAuth } from '../store/slices/authSlice'
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { initializeAuth } from '../store/slices/authSlice';
+import type { AppDispatch } from '../store';
 
 interface AuthInitializerProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function AuthInitializer({ children }: AuthInitializerProps) {
-  const dispatch = useAppDispatch()
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     // 初始化认证状态
-    dispatch(initializeAuth())
-  }, [dispatch])
+    dispatch(initializeAuth());
+  }, [dispatch]);
 
-  return <>{children}</>
+  return <>{children}</>;
 }

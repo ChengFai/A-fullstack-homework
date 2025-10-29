@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from unittest.mock import mock_open, patch
 
 import pytest
+import pytest_asyncio
 
 # 添加src目录到Python路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
@@ -188,7 +189,7 @@ class TestTicketModel:
 class TestFileDB:
     """测试FileDB类"""
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def temp_db(self):
         """创建临时数据库用于测试"""
         temp_dir = tempfile.mkdtemp()
@@ -196,6 +197,7 @@ class TestFileDB:
         yield db
         shutil.rmtree(temp_dir)
 
+    @pytest.mark.asyncio
     async def test_create_user_success(self, temp_db):
         """测试成功创建用户"""
         user = await temp_db.create_user(
@@ -213,6 +215,7 @@ class TestFileDB:
         assert user.id is not None
         assert len(user.id) > 0
 
+    @pytest.mark.asyncio
     async def test_create_user_duplicate_email(self, temp_db):
         """测试创建重复邮箱用户"""
         await temp_db.create_user(
@@ -230,6 +233,7 @@ class TestFileDB:
                 password_hash="hashed_password2",
             )
 
+    @pytest.mark.asyncio
     async def test_get_user_by_email(self, temp_db):
         """测试通过邮箱获取用户"""
         created_user = await temp_db.create_user(
@@ -244,11 +248,13 @@ class TestFileDB:
         assert found_user.id == created_user.id
         assert found_user.email == created_user.email
 
+    @pytest.mark.asyncio
     async def test_get_user_by_email_not_found(self, temp_db):
         """测试获取不存在的用户"""
         found_user = await temp_db.get_user_by_email("nonexistent@example.com")
         assert found_user is None
 
+    @pytest.mark.asyncio
     async def test_get_user_by_id(self, temp_db):
         """测试通过ID获取用户"""
         created_user = await temp_db.create_user(
@@ -263,11 +269,13 @@ class TestFileDB:
         assert found_user.id == created_user.id
         assert found_user.email == created_user.email
 
+    @pytest.mark.asyncio
     async def test_get_user_by_id_not_found(self, temp_db):
         """测试获取不存在的用户ID"""
         found_user = await temp_db.get_user_by_id("nonexistent_id")
         assert found_user is None
 
+    @pytest.mark.asyncio
     async def test_set_user_suspended(self, temp_db):
         """测试设置用户暂停状态"""
         created_user = await temp_db.create_user(
@@ -286,11 +294,13 @@ class TestFileDB:
         found_user = await temp_db.get_user_by_id(created_user.id)
         assert found_user.is_suspended is True
 
+    @pytest.mark.asyncio
     async def test_set_user_suspended_not_found(self, temp_db):
         """测试暂停不存在的用户"""
         result = await temp_db.set_user_suspended("nonexistent_id", True)
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_list_employees(self, temp_db):
         """测试列出员工"""
         # 创建员工和雇主
@@ -320,6 +330,7 @@ class TestFileDB:
         assert employee2.id in employee_ids
         assert employer.id not in employee_ids
 
+    @pytest.mark.asyncio
     async def test_list_employees_with_suspension_filter(self, temp_db):
         """测试按暂停状态过滤员工"""
         active_employee = await temp_db.create_user(
@@ -352,6 +363,7 @@ class TestFileDB:
         assert len(suspended_employees) == 1
         assert suspended_employees[0].id == suspended_employee.id
 
+    @pytest.mark.asyncio
     async def test_create_ticket(self, temp_db):
         """测试创建票据"""
         user = await temp_db.create_user(
@@ -382,6 +394,7 @@ class TestFileDB:
         assert ticket.id is not None
         assert len(ticket.id) > 0
 
+    @pytest.mark.asyncio
     async def test_get_ticket(self, temp_db):
         """测试获取票据"""
         user = await temp_db.create_user(
@@ -405,11 +418,13 @@ class TestFileDB:
         assert found_ticket.id == created_ticket.id
         assert found_ticket.user_id == created_ticket.user_id
 
+    @pytest.mark.asyncio
     async def test_get_ticket_not_found(self, temp_db):
         """测试获取不存在的票据"""
         found_ticket = await temp_db.get_ticket("nonexistent_id")
         assert found_ticket is None
 
+    @pytest.mark.asyncio
     async def test_list_tickets(self, temp_db):
         """测试列出票据"""
         user = await temp_db.create_user(
@@ -443,6 +458,7 @@ class TestFileDB:
         assert ticket1.id in ticket_ids
         assert ticket2.id in ticket_ids
 
+    @pytest.mark.asyncio
     async def test_update_ticket(self, temp_db):
         """测试更新票据"""
         user = await temp_db.create_user(
@@ -475,11 +491,13 @@ class TestFileDB:
         assert updated_ticket.status == "approved"
         assert updated_ticket.link == "https://original.com"  # 未更新的字段保持不变
 
+    @pytest.mark.asyncio
     async def test_update_ticket_not_found(self, temp_db):
         """测试更新不存在的票据"""
         result = await temp_db.update_ticket("nonexistent_id", amount=100.0)
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_soft_delete_ticket(self, temp_db):
         """测试软删除票据"""
         user = await temp_db.create_user(
@@ -506,6 +524,7 @@ class TestFileDB:
         found_ticket = await temp_db.get_ticket(ticket.id)
         assert found_ticket.is_soft_deleted is True
 
+    @pytest.mark.asyncio
     async def test_soft_delete_ticket_not_found(self, temp_db):
         """测试软删除不存在的票据"""
         result = await temp_db.soft_delete_ticket("nonexistent_id")
