@@ -32,9 +32,30 @@
 
 - Python 3.10+
 - Node.js 16+
-- PNPM
+- npm (或 pnpm)
 
-### 1. 安装 Astral UV
+### 方式一：一键启动（推荐）
+
+使用我们提供的一键启动脚本，自动安装依赖并启动前后端服务：
+
+```bash
+# 一键启动前后端服务
+./dev-start.sh
+
+# 停止所有服务
+./dev-stop.sh
+```
+
+脚本会自动：
+- 检查环境要求（Node.js、Python、uv）
+- 安装前端和后端依赖
+- 启动后端服务（端口 8000）
+- 启动前端服务（端口 5173）
+- 等待服务就绪并显示访问地址
+
+### 方式二：手动启动
+
+#### 1. 安装 Astral UV
 
 ```bash
 # macOS/Linux
@@ -45,7 +66,7 @@ source $HOME/.local/bin/env
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### 2. 启动后端服务
+#### 2. 启动后端服务
 
 ```bash
 # 进入后端目录
@@ -63,17 +84,17 @@ uv run uvicorn src.app.main:app --reload --host 0.0.0.0 --port 8000
 
 后端服务将在 `http://localhost:8000` 启动，API文档可在 `http://localhost:8000/docs` 查看。
 
-### 3. 启动前端服务
+#### 3. 启动前端服务
 
 ```bash
 # 进入前端目录
 cd frontend
 
 # 安装依赖
-pnpm install
+npm install
 
 # 启动开发服务器
-pnpm dev
+npm run dev
 ```
 
 前端应用将在 `http://localhost:5173` 启动。
@@ -193,7 +214,35 @@ pnpm build
     └── index.html
 ```
 
-## 故障排除
+## Troubleshooting
+
+### 一键启动脚本问题
+
+1. **脚本权限问题**
+   ```bash
+   # 给脚本添加执行权限
+   chmod +x dev-start.sh dev-stop.sh
+   ```
+
+2. **服务无法停止**
+   ```bash
+   # 使用停止脚本
+   ./dev-stop.sh
+   
+   # 或者手动停止所有相关进程
+   pkill -f uvicorn
+   pkill -f vite
+   ```
+
+3. **端口被占用**
+   ```bash
+   # 检查端口占用
+   lsof -i :8000  # 后端端口
+   lsof -i :5173  # 前端端口
+   
+   # 使用停止脚本清理
+   ./dev-stop.sh
+   ```
 
 ### 后端问题
 
@@ -204,17 +253,10 @@ pnpm build
    source $HOME/.local/bin/env
    ```
 
-2. **端口被占用**
-   ```bash
-   # 检查端口占用
-   lsof -i :8000
-   # 杀死进程
-   kill -9 <PID>
-   ```
-
-3. **依赖安装失败**
+2. **依赖安装失败**
    ```bash
    # 清理并重新安装
+   cd backend
    rm -rf .venv
    uv venv
    uv pip install -e .
@@ -222,31 +264,17 @@ pnpm build
 
 ### 前端问题
 
-1. **PNPM 未安装**
+1. **npm 未安装**
    ```bash
-   npm install -g pnpm
+   # 安装 Node.js 和 npm
+   # 访问 https://nodejs.org/ 下载安装
    ```
 
-2. **端口被占用**
-   ```bash
-   # 检查端口占用
-   lsof -i :5173
-   # 杀死进程
-   kill -9 <PID>
-   ```
-
-3. **依赖安装失败**
+2. **依赖安装失败**
    ```bash
    # 清理并重新安装
-   rm -rf node_modules pnpm-lock.yaml
-   pnpm install
+   cd frontend
+   rm -rf node_modules package-lock.json
+   npm install
    ```
 
-## 下一步计划
-
-- [ ] 接入 PostgreSQL 数据库
-- [ ] 添加单元测试和集成测试
-- [ ] 实现 Docker 部署
-- [ ] 添加数据验证和错误处理
-- [ ] 实现文件上传功能
-- [ ] 添加数据导出功能
