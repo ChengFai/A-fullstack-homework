@@ -232,3 +232,45 @@ class TestDatabaseService:
         # 验证票据仍然存在但被标记为删除
         found_ticket = await db_service.get_ticket(ticket.id)
         assert found_ticket.is_soft_deleted is True
+
+    async def test_get_tickets_for_suspended_users(self, db_service: DatabaseService):
+        """测试查询被暂停用户的票据"""
+        # 创建两个用户：一个正常、一个暂停
+        active_user = await db_service.create_user(
+            email="active@example.com",
+            username="active",
+            role="employee",
+            password_hash="hash",
+        )
+        suspended_user = await db_service.create_user(
+            email="suspended@example.com",
+            username="suspended",
+            role="employee",
+            password_hash="hash",
+        )
+
+        # 各自创建票据
+        await db_service.create_ticket(
+            user_id=active_user.id,
+            spent_at=datetime.now(timezone.utc),
+            amount=10.0,
+            currency="USD",
+            description="active",
+            link=None,
+        )
+        suspended_ticket = await db_service.create_ticket(
+            user_id=suspended_user.id,
+            spent_at=datetime.now(timezone.utc),
+            amount=20.0,
+            currency="USD",
+            description="suspended",
+            link=None,
+        )
+
+        # 将其中一个用户设为暂停
+        await db_service.set_user_suspended(suspended_user.id, True)
+
+        # 查询被暂停用户的票据
+        tickets = await db_service.get_tickets_for_suspended_users()
+        assert len(tickets) == 1
+        assert tickets[0].id == suspended_ticket.id

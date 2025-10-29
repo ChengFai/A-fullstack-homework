@@ -105,6 +105,31 @@ class TestAuthEndpoints:
         data = response.json()
         assert data["detail"] == "User not found"
 
+    async def test_login_forbidden_when_user_suspended(self, async_client: AsyncClient, clean_db, db_session: AsyncSession):
+        """测试被暂停用户禁止登录"""
+        # 先注册用户
+        register_data = {
+            "email": "suspendme@example.com",
+            "username": "suspendme",
+            "password": "password123",
+            "role": "employee",
+        }
+        await async_client.post("/auth/register", json=register_data)
+
+        # 将用户设为暂停
+        db_service = DatabaseService(db_session)
+        existing = await db_service.get_user_by_email("suspendme@example.com")
+        assert existing is not None
+        await db_service.set_user_suspended(existing.id, True)
+
+        # 尝试登录
+        login_data = {"email": "suspendme@example.com", "password": "password123"}
+        response = await async_client.post("/auth/login", json=login_data)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        data = response.json()
+        assert data["detail"] == "您的账户已被停用，请联系管理员"
+
     async def test_me_endpoint_success(self, async_client: AsyncClient, clean_db, auth_headers_employee):
         """测试获取当前用户信息"""
         response = await async_client.get("/auth/me", headers=auth_headers_employee)

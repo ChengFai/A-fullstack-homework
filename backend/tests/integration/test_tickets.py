@@ -149,6 +149,120 @@ class TestTicketEndpoints:
         assert data[0]["id"] == str(ticket.id)
         assert data[0]["user_id"] == str(employee.id)
 
+    async def test_employer_cannot_see_suspended_user_tickets(
+        self,
+        async_client: AsyncClient,
+        clean_db,
+        auth_headers_employer,
+        db_session: AsyncSession,
+    ):
+        """测试雇主看不到被暂停用户的票据"""
+        db_service = DatabaseService(db_session)
+        employee = await db_service.create_user(
+            email="emp@example.com",
+            username="emp",
+            role="employee",
+            password_hash="hash",
+        )
+        ticket = await db_service.create_ticket(
+            user_id=employee.id,
+            spent_at=datetime.now(timezone.utc),
+            amount=88.0,
+            currency="USD",
+            description="Should be hidden",
+            link="https://hidden.example.com",
+        )
+
+        # 暂停该员工
+        await db_service.set_user_suspended(employee.id, True)
+
+        # 雇主获取票据列表时不应看到该票据
+        response = await async_client.get("/tickets/", headers=auth_headers_employer)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert all(item["id"] != str(ticket.id) for item in data)
+
+    async def test_employee_cannot_get_specific_ticket_when_owner_suspended_for_employer(
+        self,
+        async_client: AsyncClient,
+        clean_db,
+        auth_headers_employer,
+        db_session: AsyncSession,
+    ):
+        """测试雇主获取被暂停用户的单个票据返回404"""
+        db_service = DatabaseService(db_session)
+        employee = await db_service.create_user(
+            email="emp2@example.com",
+            username="emp2",
+            role="employee",
+            password_hash="hash",
+        )
+        ticket = await db_service.create_ticket(
+            user_id=employee.id,
+            spent_at=datetime.now(timezone.utc),
+            amount=77.0,
+            currency="USD",
+            description="Hidden single",
+            link="https://hidden-single.example.com",
+        )
+        await db_service.set_user_suspended(employee.id, True)
+
+        response = await async_client.get(
+            f"/tickets/{ticket.id}", headers=auth_headers_employer
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    async def test_chained_ticket_flow_create_list_approve_list(
+        self,
+        async_client: AsyncClient,
+        clean_db,
+        auth_headers_employee,
+        auth_headers_employer,
+    ):
+        """链式测试：员工GET空->POST创建->GET为1；雇主审批->雇主GET验证状态"""
+        # 员工首次获取应为空
+        response = await async_client.get("/tickets/", headers=auth_headers_employee)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == []
+
+        # 创建票据
+        new_ticket = {
+            "spent_at": datetime.now(timezone.utc).isoformat(),
+            "amount": 123.45,
+            "currency": "USD",
+            "description": "Business lunch",
+            "link": "https://receipt.example.com",
+        }
+        response = await async_client.post(
+            "/tickets/", json=new_ticket, headers=auth_headers_employee
+        )
+        assert response.status_code == status.HTTP_200_OK
+        created = response.json()
+        ticket_id = created["id"]
+        assert created["status"] == "pending"
+
+        # 员工再次GET应为1
+        response = await async_client.get("/tickets/", headers=auth_headers_employee)
+        assert response.status_code == status.HTTP_200_OK
+        items = response.json()
+        assert len(items) == 1
+        assert items[0]["id"] == ticket_id
+        assert items[0]["status"] == "pending"
+
+        # 雇主审批
+        response = await async_client.post(
+            f"/tickets/{ticket_id}/approve", headers=auth_headers_employer
+        )
+        assert response.status_code == status.HTTP_200_OK
+        approved = response.json()
+        assert approved["status"] == "approved"
+
+        # 雇主GET应能看到状态为approved
+        response = await async_client.get("/tickets/", headers=auth_headers_employer)
+        assert response.status_code == status.HTTP_200_OK
+        employer_items = response.json()
+        assert any(it["id"] == ticket_id and it["status"] == "approved" for it in employer_items)
+
     async def test_get_ticket_success(
         self, async_client: AsyncClient, clean_db, auth_headers_employee, test_ticket
     ):
