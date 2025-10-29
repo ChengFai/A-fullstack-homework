@@ -70,16 +70,10 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
           ) : (
             <div className="flex items-center space-x-2">
               <a
-                href="/login"
-                className="px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                href="/auth"
+                className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors duration-200"
               >
-                登录
-              </a>
-              <a
-                href="/register"
-                className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors duration-200"
-              >
-                注册
+                登录/注册
               </a>
             </div>
           )}

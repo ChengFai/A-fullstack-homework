@@ -26,3 +26,13 @@ export async function register(body: RegisterReq): Promise<AuthRes> {
   const { data } = await api.post('/auth/register', body);
   return data;
 }
+
+export async function checkUserExists(email: string): Promise<{ exists: boolean }> {
+  const { data } = await api.get(`/auth/check-user/${email}`);
+  return data;
+}
+
+export async function validateToken(): Promise<AuthRes> {
+  const { data } = await api.get('/auth/me');
+  return data;
+}

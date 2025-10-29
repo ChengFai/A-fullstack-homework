@@ -1,11 +1,12 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { login, register } from '../../services/auth';
+import { login, register, checkUserExists as checkUserExistsService, validateToken } from '../../services/auth';
 
 export interface User {
   id: string;
   email: string;
   username: string;
   role: 'employee' | 'employer';
+  is_suspended?: boolean;
 }
 
 export interface AuthState {
@@ -14,6 +15,8 @@ export interface AuthState {
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
+  userExists: boolean | null;
+  checkingUser: boolean;
 }
 
 const initialState: AuthState = {
@@ -22,6 +25,8 @@ const initialState: AuthState = {
   isAuthenticated: !!localStorage.getItem('token'),
   loading: false,
   error: null,
+  userExists: null,
+  checkingUser: false,
 };
 
 // 异步thunk：登录
@@ -69,6 +74,21 @@ export const registerUser = createAsyncThunk(
   }
 );
 
+// 异步thunk：检查用户是否存在
+export const checkUserExists = createAsyncThunk(
+  'auth/checkUserExists',
+  async (email: string, { rejectWithValue }) => {
+    try {
+      const response = await checkUserExistsService(email);
+      return response.exists;
+    } catch (error: any) {
+      return rejectWithValue(
+        error?.response?.data?.detail || error?.message || '检查用户失败'
+      );
+    }
+  }
+);
+
 // 异步thunk：登出
 export const logoutUser = createAsyncThunk(
   'auth/logout',
@@ -88,15 +108,25 @@ export const initializeAuth = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('token');
-      const role = localStorage.getItem('role');
-
-      if (token && role) {
-        // 这里可以添加验证token有效性的API调用
-        return { token, role };
+      
+      if (!token) {
+        return null;
       }
-      return null;
+
+      // 验证token有效性并获取用户信息
+      const response = await validateToken();
+      
+      // 如果用户被暂停，清除认证状态
+      if (response.user.is_suspended) {
+        localStorage.clear();
+        return null;
+      }
+
+      return response;
     } catch (error: any) {
-      return rejectWithValue(error?.message || '初始化认证失败');
+      // Token无效，清除本地存储
+      localStorage.clear();
+      return rejectWithValue(error?.message || 'Token验证失败');
     }
   }
 );
@@ -111,6 +141,9 @@ const authSlice = createSlice({
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
       state.isAuthenticated = true;
+    },
+    clearUserExists: state => {
+      state.userExists = null;
     },
   },
   extraReducers: builder => {
@@ -155,15 +188,46 @@ const authSlice = createSlice({
         state.error = null;
       })
       // 初始化认证
+      .addCase(initializeAuth.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(initializeAuth.fulfilled, (state, action) => {
+        state.loading = false;
         if (action.payload) {
+          state.user = action.payload.user;
           state.token = action.payload.token;
           state.isAuthenticated = true;
-          // 这里可以设置用户信息，如果有API获取用户详情的话
+          state.error = null;
+        } else {
+          state.user = null;
+          state.token = null;
+          state.isAuthenticated = false;
         }
+      })
+      .addCase(initializeAuth.rejected, (state, action) => {
+        state.loading = false;
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        state.error = action.payload as string;
+      })
+      // 检查用户是否存在
+      .addCase(checkUserExists.pending, state => {
+        state.checkingUser = true;
+        state.error = null;
+      })
+      .addCase(checkUserExists.fulfilled, (state, action) => {
+        state.checkingUser = false;
+        state.userExists = action.payload;
+        state.error = null;
+      })
+      .addCase(checkUserExists.rejected, (state, action) => {
+        state.checkingUser = false;
+        state.error = action.payload as string;
       });
   },
 });
 
-export const { clearError, setUser } = authSlice.actions;
+export const { clearError, setUser, clearUserExists } = authSlice.actions;
 export default authSlice.reducer;

@@ -1,16 +1,383 @@
 # Expense Tracker Backend
 
-FastAPI backend for expense tracking system.
+基于 FastAPI 的费用跟踪系统后端服务，支持员工和雇主两种角色的报销管理。
 
-## Installation
+## 功能特性
+
+- **用户认证**: JWT token认证，支持用户注册和登录
+- **角色管理**: 员工和雇主两种角色，不同权限控制
+- **票据管理**: 创建、更新、删除、审批报销票据
+- **员工管理**: 雇主可以暂停/激活员工账户
+- **数据库集成**: PostgreSQL + SQLAlchemy + asyncpg
+- **软删除**: 被暂停员工的票据会被隐藏但保留在数据库中
+- **API文档**: 自动生成的Swagger/OpenAPI文档
+
+## 技术栈
+
+- **框架**: FastAPI + Uvicorn
+- **数据库**: PostgreSQL + SQLAlchemy + asyncpg
+- **认证**: JWT + Passlib (bcrypt)
+- **包管理**: Astral UV
+- **测试**: pytest + pytest-asyncio
+- **代码格式化**: Black + isort
+- **类型检查**: mypy
+
+## 快速开始
+
+### 环境要求
+
+- Python 3.10+
+- PostgreSQL 12+
+- Astral UV
+
+### 安装依赖
 
 ```bash
+# 创建虚拟环境
 uv venv
+
+# 安装依赖
 uv pip install -e .
+
+# 安装开发依赖
+uv pip install -e ".[dev]"
 ```
 
-## Running
+### 数据库设置
+
+#### 使用Docker（推荐）
 
 ```bash
-uv run uvicorn src.app.main:app --reload --host 0.0.0.0 --port 8000
+# 启动PostgreSQL数据库
+docker-compose up -d postgres
+
+# 等待数据库启动完成
+docker-compose logs postgres
 ```
+
+#### 手动安装PostgreSQL
+
+```bash
+# macOS
+brew install postgresql
+brew services start postgresql
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# 创建数据库
+sudo -u postgres psql
+CREATE DATABASE expense_tracker;
+CREATE USER postgres WITH PASSWORD 'password123';
+GRANT ALL PRIVILEGES ON DATABASE expense_tracker TO postgres;
+\q
+```
+
+### 环境配置
+
+创建 `.env` 文件：
+
+```env
+# 数据库配置
+DATABASE_URL=postgresql+asyncpg://postgres:password123@localhost:5432/expense_tracker
+
+# JWT配置
+SECRET_KEY=your-secret-key-here-change-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# 应用配置
+DEBUG=true
+LOG_LEVEL=INFO
+```
+
+### 启动服务
+
+```bash
+# 开发模式启动
+uv run uvicorn src.app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 生产模式启动
+uv run uvicorn src.app.main:app --host 0.0.0.0 --port 8000
+```
+
+服务启动后，可以访问：
+- **API文档**: http://localhost:8000/docs
+- **健康检查**: http://localhost:8000/health
+- **API端点**: http://localhost:8000
+
+## 项目结构
+
+```
+backend/
+├── src/
+│   └── app/
+│       ├── __init__.py
+│       ├── main.py              # FastAPI应用入口
+│       ├── database.py          # 数据库配置
+│       ├── db_service.py        # 数据库服务层
+│       ├── models.py            # SQLAlchemy模型
+│       ├── routers/             # API路由
+│       │   ├── auth.py          # 认证相关API
+│       │   ├── tickets.py       # 票据管理API
+│       │   └── employees.py     # 员工管理API
+│       ├── schemas/             # Pydantic模型
+│       │   ├── auth.py          # 认证相关模型
+│       │   ├── ticket.py        # 票据模型
+│       │   └── user.py          # 用户模型
+│       └── security/            # 安全相关
+│           ├── dependencies.py # 依赖注入
+│           ├── jwt.py           # JWT处理
+│           └── passwords.py     # 密码处理
+├── tests/                       # 测试文件
+│   ├── unit/                    # 单元测试
+│   ├── integration/             # 集成测试
+│   └── fixtures/                # 测试fixtures
+├── pyproject.toml               # 项目配置
+├── pytest.ini                  # pytest配置
+├── run_tests.py                # 测试运行脚本
+├── init.sql                    # 数据库初始化脚本
+└── README.md                   # 本文档
+```
+
+## API接口
+
+### 认证接口
+
+- `POST /auth/login` - 用户登录
+- `POST /auth/register` - 用户注册
+- `GET /auth/me` - 获取当前用户信息
+
+### 票据接口
+
+- `GET /tickets/` - 获取票据列表
+- `POST /tickets/` - 创建票据
+- `GET /tickets/{ticket_id}` - 获取单个票据
+- `PUT /tickets/{ticket_id}` - 更新票据
+- `DELETE /tickets/{ticket_id}` - 删除票据
+- `POST /tickets/{ticket_id}/approve` - 批准票据
+- `POST /tickets/{ticket_id}/deny` - 拒绝票据
+
+### 员工管理接口
+
+- `GET /employees/` - 获取员工列表
+- `POST /employees/{user_id}/suspend` - 暂停员工
+- `POST /employees/{user_id}/activate` - 激活员工
+
+详细的API文档请访问 http://localhost:8000/docs
+
+## 数据库模型
+
+### 用户表 (users)
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | UUID | 主键 |
+| email | VARCHAR(255) | 邮箱（唯一） |
+| username | VARCHAR(100) | 用户名 |
+| role | VARCHAR(20) | 角色（employee/employer） |
+| password_hash | VARCHAR(255) | 密码哈希 |
+| is_suspended | BOOLEAN | 是否被暂停 |
+| created_at | TIMESTAMP | 创建时间 |
+| updated_at | TIMESTAMP | 更新时间 |
+
+### 票据表 (tickets)
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | UUID | 主键 |
+| user_id | UUID | 用户ID（外键） |
+| spent_at | TIMESTAMP | 消费时间 |
+| amount | DECIMAL(10,2) | 金额 |
+| currency | VARCHAR(10) | 货币 |
+| description | TEXT | 描述 |
+| link | VARCHAR(500) | 链接 |
+| status | VARCHAR(20) | 状态（pending/approved/denied） |
+| is_soft_deleted | BOOLEAN | 是否软删除 |
+| created_at | TIMESTAMP | 创建时间 |
+| updated_at | TIMESTAMP | 更新时间 |
+
+## 测试
+
+### 运行测试
+
+```bash
+# 运行所有测试
+python run_tests.py all
+
+# 运行单元测试
+python run_tests.py unit
+
+# 运行集成测试
+python run_tests.py integration
+
+# 生成覆盖率报告
+python run_tests.py coverage
+
+# 快速测试（遇到失败立即停止）
+python run_tests.py fast
+```
+
+### 测试结构
+
+- **单元测试** (`tests/unit/`): 测试独立的函数和类
+- **集成测试** (`tests/integration/`): 测试API端点的完整功能
+- **测试fixtures** (`tests/fixtures/`): 共享的测试配置和数据
+
+### 测试覆盖率
+
+目标覆盖率：
+- 整体覆盖率: ≥ 80%
+- 关键模块覆盖率: ≥ 90%
+- 新增代码覆盖率: ≥ 95%
+
+## 代码质量
+
+### 代码格式化
+
+```bash
+# 格式化代码
+uv run black .
+
+# 检查代码格式
+uv run black --check .
+
+# 排序导入
+uv run isort .
+
+# 检查导入排序
+uv run isort --check-only .
+```
+
+### 类型检查
+
+```bash
+# 运行类型检查
+uv run mypy src/
+```
+
+### 代码质量检查
+
+```bash
+# 运行所有质量检查
+uv run black --check . && uv run isort --check-only . && uv run mypy src/
+```
+
+## 开发指南
+
+### 添加新的API端点
+
+1. 在 `src/app/routers/` 中创建或修改路由文件
+2. 在 `src/app/schemas/` 中定义Pydantic模型
+3. 在 `src/app/models.py` 中定义SQLAlchemy模型（如需要）
+4. 在 `src/app/db_service.py` 中添加数据库操作
+5. 添加相应的测试
+
+### 数据库迁移
+
+```bash
+# 创建迁移
+alembic revision --autogenerate -m "描述"
+
+# 执行迁移
+alembic upgrade head
+
+# 回滚迁移
+alembic downgrade -1
+```
+
+### 添加新的测试
+
+1. 在相应的测试文件中添加测试方法
+2. 使用现有的fixtures或创建新的fixtures
+3. 确保测试覆盖正常情况和错误情况
+4. 运行测试验证功能正确性
+
+## 部署
+
+### Docker部署
+
+```bash
+# 构建镜像
+docker build -f Dockerfile.backend -t expense-tracker-backend .
+
+# 运行容器
+docker run -p 8000:8000 -e DATABASE_URL="postgresql+asyncpg://..." expense-tracker-backend
+```
+
+### 生产环境配置
+
+```env
+# 生产环境变量
+DATABASE_URL=postgresql+asyncpg://user:password@host:port/database
+SECRET_KEY=your-production-secret-key
+DEBUG=false
+LOG_LEVEL=WARNING
+```
+
+## 故障排除
+
+### 常见问题
+
+1. **数据库连接失败**
+   ```bash
+   # 检查数据库是否运行
+   docker-compose ps postgres
+   
+   # 检查连接字符串
+   echo $DATABASE_URL
+   ```
+
+2. **依赖安装失败**
+   ```bash
+   # 清理并重新安装
+   rm -rf .venv
+   uv venv
+   uv pip install -e .
+   ```
+
+3. **测试失败**
+   ```bash
+   # 检查测试环境
+   python run_tests.py install
+   
+   # 运行单个测试
+   pytest tests/unit/test_security.py -v
+   ```
+
+### 调试技巧
+
+```bash
+# 启用详细日志
+export LOG_LEVEL=DEBUG
+
+# 运行单个测试并显示详细输出
+pytest tests/unit/test_security.py::TestPasswordHashing::test_hash_password_returns_string -v -s
+
+# 在测试失败时进入调试器
+pytest tests/ --pdb
+```
+
+## 贡献指南
+
+1. Fork项目
+2. 创建功能分支
+3. 提交更改
+4. 运行测试确保通过
+5. 运行代码质量检查
+6. 创建Pull Request
+
+### 代码规范
+
+- 使用Black格式化代码
+- 使用isort排序导入
+- 使用mypy进行类型检查
+- 确保测试覆盖率≥80%
+- 提交信息使用约定式提交格式
+
+## 许可证
+
+MIT License

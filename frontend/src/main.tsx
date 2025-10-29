@@ -5,13 +5,16 @@ import { Provider } from 'react-redux';
 import { store } from './store';
 import App from './App';
 import './index.css';
-import LoginPage from './routes/LoginPage';
-import RegisterPage from './routes/RegisterPage';
+import AuthPage from './routes/AuthPage';
 import TicketListPage from './routes/TicketListPage';
 import EmployeeListPage from './routes/EmployeeListPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import PermissionGuard from './components/PermissionGuard';
 import { AuthInitializer } from './components/AuthInitializer';
+import ErrorBoundary from './components/ErrorBoundary';
+import GlobalErrorHandler from './components/GlobalErrorHandler';
+import { NetworkStatusIndicator } from './components/LoadingSpinner';
 
 const router = createBrowserRouter([
   {
@@ -22,23 +25,15 @@ const router = createBrowserRouter([
         path: '/',
         element: (
           <PublicRoute>
-            <LoginPage />
+            <AuthPage />
           </PublicRoute>
         ),
       },
       {
-        path: '/login',
+        path: '/auth',
         element: (
           <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        ),
-      },
-      {
-        path: '/register',
-        element: (
-          <PublicRoute>
-            <RegisterPage />
+            <AuthPage />
           </PublicRoute>
         ),
       },
@@ -53,8 +48,10 @@ const router = createBrowserRouter([
       {
         path: '/employees',
         element: (
-          <ProtectedRoute requiredRole='employer'>
-            <EmployeeListPage />
+          <ProtectedRoute>
+            <PermissionGuard requiredRole="employer" requiredPermissions={['manage_employees']}>
+              <EmployeeListPage />
+            </PermissionGuard>
           </ProtectedRoute>
         ),
       },
@@ -64,8 +61,12 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
-    <AuthInitializer>
-      <RouterProvider router={router} />
-    </AuthInitializer>
+    <ErrorBoundary>
+      <AuthInitializer>
+        <NetworkStatusIndicator />
+        <GlobalErrorHandler />
+        <RouterProvider router={router} />
+      </AuthInitializer>
+    </ErrorBoundary>
   </Provider>
 );

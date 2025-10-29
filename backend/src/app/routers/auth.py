@@ -79,6 +79,14 @@ async def register(payload: RegisterRequest, db_session: AsyncSession = Depends(
     )
 
 
+@router.get("/check-user/{email}")
+async def check_user_exists(email: str, db_session: AsyncSession = Depends(get_db)):
+    """检查用户是否存在"""
+    db_service = DatabaseService(db_session)
+    existing = await db_service.get_user_by_email(email)
+    return {"exists": existing is not None}
+
+
 @router.get("/me", response_model=UserPublic)
 async def me(user=Depends(get_current_user)):
     return UserPublic(

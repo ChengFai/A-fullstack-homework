@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { registerUser, clearError } from '../store/slices/authSlice';
+import { 
+  loginUser, 
+  registerUser, 
+  checkUserExists, 
+  clearError, 
+  clearUserExists 
+} from '../store/slices/authSlice';
 
-function RegisterPage() {
+function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
-  const { loading, error, isAuthenticated } = useAppSelector(
-    state => state.auth
-  );
+  const { 
+    loading, 
+    error, 
+    isAuthenticated, 
+    checkingUser 
+  } = useAppSelector(state => state.auth);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +41,7 @@ function RegisterPage() {
   useEffect(() => {
     return () => {
       dispatch(clearError());
+      dispatch(clearUserExists());
     };
   }, [dispatch]);
 
@@ -40,25 +50,58 @@ function RegisterPage() {
     setLocalError('');
     dispatch(clearError());
 
-    // 验证密码确认
-    if (password !== confirmPassword) {
-      setLocalError('两次输入的密码不一致');
-      return;
+    // 先检查用户是否存在
+    try {
+      const checkResult = await dispatch(checkUserExists(email));
+      const userExists = checkResult.payload as boolean;
+      
+      if (userExists) {
+        // 用户存在，执行登录
+        dispatch(loginUser({ email, password }));
+      } else {
+        // 用户不存在，执行注册
+        // 注册模式验证
+        if (password !== confirmPassword) {
+          setLocalError('两次输入的密码不一致');
+          return;
+        }
+        if (!role) {
+          setLocalError('请选择角色');
+          return;
+        }
+        if (!username.trim()) {
+          setLocalError('请输入用户名');
+          return;
+        }
+        
+        dispatch(registerUser({ email, password, username, role }));
+      }
+    } catch (error) {
+      setLocalError('检查用户状态失败，请重试');
     }
+  };
 
-    // 验证角色选择
-    if (!role) {
-      setLocalError('请选择角色');
-      return;
+  const getButtonText = () => {
+    if (loading) {
+      return '处理中...';
     }
+    if (checkingUser) {
+      return '检查中...';
+    }
+    return '提交';
+  };
 
-    dispatch(registerUser({ email, password, username, role }));
+  const getTitle = () => {
+    if (checkingUser) {
+      return '检查用户';
+    }
+    return '登录/注册';
   };
 
   return (
     <div className='mt-10 flex items-center justify-center bg-gray-50'>
       <div className='max-w-md w-full bg-white p-8 rounded-lg shadow-md'>
-        <h1 className='text-2xl font-bold text-center mb-6'>注册</h1>
+        <h1 className='text-2xl font-bold text-center mb-6'>{getTitle()}</h1>
 
         {(error || localError) && (
           <div className='mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded'>
@@ -95,7 +138,6 @@ function RegisterPage() {
             <input
               id='username'
               type='text'
-              required
               className='w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
               placeholder='请输入用户名'
               value={username}
@@ -112,7 +154,6 @@ function RegisterPage() {
             </label>
             <select
               id='role'
-              required
               className='w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
               value={role}
               onChange={e => setRole(e.target.value as 'employee' | 'employer')}
@@ -152,7 +193,6 @@ function RegisterPage() {
             <input
               id='confirmPassword'
               type='password'
-              required
               className='w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
               placeholder='请再次输入密码'
               value={confirmPassword}
@@ -162,27 +202,15 @@ function RegisterPage() {
 
           <button
             type='submit'
-            disabled={loading}
-            className='w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed'
+            disabled={loading || checkingUser}
+            className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed'
           >
-            {loading ? '注册中...' : '注册'}
+            {getButtonText()}
           </button>
         </form>
-
-        <div className='mt-6 text-center'>
-          <p className='text-gray-600'>
-            已有账户？{' '}
-            <Link
-              to='/login'
-              className='text-blue-600 hover:text-blue-800 font-medium'
-            >
-              立即登录
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );
 }
 
-export default RegisterPage;
+export default AuthPage;

@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -35,4 +36,22 @@ app.include_router(employees.router, prefix="/employees", tags=["employees"])
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    """健康检查端点，包含数据库连接检查"""
+    try:
+        # 检查数据库连接
+        from .database import engine
+        async with engine.begin() as conn:
+            await conn.execute("SELECT 1")
+        
+        return {
+            "status": "ok",
+            "database": "connected",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "database": "disconnected",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
