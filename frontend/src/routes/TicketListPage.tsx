@@ -2,27 +2,21 @@ import { useEffect, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import {
   fetchTickets,
-  createNewTicket,
   approveTicketAction,
   denyTicketAction,
   deleteTicketAction,
   clearError,
 } from '../store/slices/ticketsSlice';
+import { CreateTicketModal } from '../components/CreateTicketModal';
 
 function TicketListPage() {
   const dispatch = useAppDispatch();
-  const { tickets, loading, error, creating, updating } = useAppSelector(
+  const { tickets, loading, error, updating } = useAppSelector(
     state => state.tickets
   );
   const { user } = useAppSelector(state => state.auth);
 
-  const [form, setForm] = useState({
-    spent_at: '',
-    amount: 0,
-    currency: 'USD',
-    description: '',
-    link: '',
-  });
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchTickets());
@@ -30,23 +24,6 @@ function TicketListPage() {
       dispatch(clearError());
     };
   }, [dispatch]);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    dispatch(
-      createNewTicket({
-        ...form,
-        amount: Number(form.amount),
-      })
-    );
-    setForm({
-      spent_at: '',
-      amount: 0,
-      currency: 'USD',
-      description: '',
-      link: '',
-    });
-  };
 
   const handleAction = (id: string, type: 'approve' | 'deny' | 'delete') => {
     if (type === 'approve') {
@@ -86,79 +63,24 @@ function TicketListPage() {
         </div>
       )}
 
-      {/* 新增票据表单 */}
+      {/* 新增票据按钮 */}
       {user?.role === 'employee' && (
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">新增票据</h2>
-          <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex items-center justify-between">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">消费时间</label>
-              <input
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                type="datetime-local"
-                value={form.spent_at}
-                onChange={e => setForm({ ...form, spent_at: e.target.value })}
-                required
-              />
+              <h2 className="text-lg font-semibold text-gray-900">票据管理</h2>
+              <p className="text-gray-600 mt-1">创建和管理您的费用报销票据</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">金额</label>
-              <input
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                type="number"
-                step="0.01"
-                value={form.amount}
-                onChange={e => setForm({ ...form, amount: Number(e.target.value) })}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">币种</label>
-              <input
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={form.currency}
-                onChange={e => setForm({ ...form, currency: e.target.value })}
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
-              <input
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="请输入票据描述"
-                value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">相关链接</label>
-              <input
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="请输入相关链接（可选）"
-                value={form.link}
-                onChange={e => setForm({ ...form, link: e.target.value })}
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                type="submit"
-                disabled={creating}
-              >
-                {creating ? (
-                  <div className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    创建中...
-                  </div>
-                ) : (
-                  '新增票据'
-                )}
-              </button>
-            </div>
-          </form>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>新增票据</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -266,6 +188,12 @@ function TicketListPage() {
           </div>
         )}
       </div>
+
+      {/* 新增票据模态框 */}
+      <CreateTicketModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 }
